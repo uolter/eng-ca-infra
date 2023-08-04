@@ -1,12 +1,13 @@
 variable "aws_region" {
   type        = string
   description = "AWS region to create resources. Default Milan"
-  default     = "eu-south-1"
+  default     = "eu-west-1"
 }
 
 variable "app_name" {
   type        = string
   description = "App name."
+  default     = "ca"
 }
 
 variable "environment" {
@@ -30,7 +31,7 @@ variable "vpc_cidr" {
 variable "azs" {
   type        = list(string)
   description = "Availability zones"
-  default     = ["eu-south-1a", "eu-south-1b", "eu-south-1c"]
+  default     = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
 }
 
 variable "vpc_private_subnets_cidr" {
@@ -54,19 +55,64 @@ variable "vpc_internal_subnets_cidr" {
 variable "enable_nat_gateway" {
   type        = bool
   description = "Enable/Create nat gateway"
-  default     = false
+  default     = true
 }
 
 ## Public Dns zones
 variable "public_dns_zones" {
   type        = map(any)
   description = "Route53 Hosted Zone"
+  default     = null
 }
 
 variable "dns_record_ttl" {
   type        = number
   description = "Dns record ttl (in sec)"
   default     = 86400 # 24 hours
+}
+
+#-------------------------
+# ECR
+#-------------------------
+variable "ecr_name" {
+  description = "Name of Elastic Container Registry repo."
+  default     = "vault"
+}
+
+
+#-------------------------
+# S3
+#-------------------------
+variable "s3_bucket_name" {
+  description = "Name of S3 Storage Bucket used for Vault backend"
+  default     = "vault-storage"
+}
+
+
+#-------------------------
+# ECS
+#-------------------------
+variable "ecs_cluster_name" {
+  description = "Name of ECS Cluster"
+  default     = "vault-ecs-cluster"
+}
+
+variable "ecs_service_name" {
+  default = "vault-ecs-service"
+}
+
+variable "ecs_logs_retention_days" {
+  type        = number
+  description = "ECS log group retention in days"
+  default     = 5
+}
+
+
+#-------------------------
+# HashiCorp Vault
+#-------------------------
+variable "vault_version" {
+  default = "1.13.3"
 }
 
 variable "tags" {
