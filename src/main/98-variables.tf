@@ -112,7 +112,7 @@ variable "ecs_logs_retention_days" {
 # HashiCorp Vault
 #-------------------------
 variable "vault_version" {
-  default = "1.13.3"
+  default = "1.14.6"
 }
 
 variable "tags" {
