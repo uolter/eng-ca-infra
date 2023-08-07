@@ -10,6 +10,20 @@ resource "aws_cloudwatch_log_group" "ecs_vault" {
 
 
 #---------------------------
+# ECR
+#---------------------------
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecr_repository
+resource "aws_ecr_repository" "vault_ecr" {
+  name                 = var.ecr_name
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+}
+
+#---------------------------
 # ECS Cluster
 #---------------------------
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_cluster
@@ -34,9 +48,12 @@ resource "aws_ecs_cluster_capacity_providers" "ecs_cluster_capacity" {
 # ECS Task Definition
 #---------------------------
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition
+
 resource "aws_ecs_task_definition" "ecs-task-def" {
-  family                   = "vault-ecs-task-def"
+  count                    = 2
+  family                   = "vault-ecs-task-def-${count.index}"
   execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ecsTaskExecutionRole"
+  task_role_arn            = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ecsTaskExecutionRole"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = 512
@@ -45,7 +62,7 @@ resource "aws_ecs_task_definition" "ecs-task-def" {
 [
   {
     "name": "vault-docker",
-    "image": "hashicorp/vault:1.14",
+    "image": "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/vault:${var.vault_version}",
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
@@ -56,31 +73,50 @@ resource "aws_ecs_task_definition" "ecs-task-def" {
     },
     "portMappings": [
       {
+        "name": "vault${count.index}",
         "hostPort": 8200,
         "protocol": "tcp",
         "containerPort": 8200
+      },
+      {
+        "name": "cluster-vault${count.index}",
+        "hostPort": 8201,
+        "protocol": "tcp",
+        "containerPort": 8201
       }
     ],
     "environment": [
       {
-        "name": "AWS_ACCESS_KEY_ID",
-        "value": "${aws_iam_access_key.vault-user.id}"
+          "name": "VAULT_ADDR",
+          "value": "http://0.0.0.0:8200"
+      },
+      {
+          "name": "VAULT_API_ADDR",
+          "value": "http://vault${count.index}:8200"
+      },
+      {
+        "name": "VAULT_CLUSTER_ADDR",
+        "value": "http://cluster-vault${count.index}:8201"
       },
       {
         "name": "AWS_REGION",
         "value": "${var.aws_region}"
       },
       {
-        "name": "AWS_S3_BUCKET",
-        "value": "${aws_s3_bucket.vault_s3_backend.id}"
-      },
-      {
         "name": "AWS_SECRET_ACCESS_KEY",
         "value": "${aws_iam_access_key.vault-user.secret}"
       },
       {
+        "name": "VAULT_SEAL_TYPE",
+        "value": "awskms"
+      },
+      {
         "name": "VAULT_AWSKMS_SEAL_KEY_ID",
         "value": "${aws_kms_key.vault_key.key_id}"
+      },
+      {
+        "name": "VAULT_DISABLE_MLOCK",
+        "value": "false"
       }
     ],
     "essential": true
@@ -94,12 +130,18 @@ TASK_DEFINITION
   }
 }
 
+resource "aws_service_discovery_http_namespace" "vault" {
+  name        = "vault"
+  description = "Namespace for hashicorp vault."
+}
+
 
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_service
 resource "aws_ecs_service" "vault-svc" {
-  name            = var.ecs_service_name
+  count           = 2
+  name            = "${var.ecs_service_name}-${count.index}"
   cluster         = var.ecs_cluster_name
-  task_definition = aws_ecs_task_definition.ecs-task-def.arn
+  task_definition = aws_ecs_task_definition.ecs-task-def[count.index].arn
   desired_count   = 1
   launch_type     = "FARGATE"
   network_configuration {
@@ -109,4 +151,26 @@ resource "aws_ecs_service" "vault-svc" {
     ]
     assign_public_ip = "true"
   }
+
+  service_connect_configuration {
+    enabled   = true
+    namespace = aws_service_discovery_http_namespace.vault.arn
+    service {
+      client_alias {
+        dns_name = "vault${count.index}"
+        port     = 8200
+      }
+      port_name = "vault${count.index}"
+    }
+
+    service {
+      client_alias {
+        dns_name = "cluster-vault${count.index}"
+        port     = 8201
+      }
+      port_name = "cluster-vault${count.index}"
+    }
+
+  }
 }
+

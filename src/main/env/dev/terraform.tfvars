@@ -6,7 +6,7 @@ environment = "dev"
 tags = {
   CreatedBy   = "Terraform"
   Environment = "Dev"
-  Owner       = "<name of the project>"
-  Source      = "<git repo url>"
-  CostCenter  = "<eg: TS310 - PAGAMENTI e SERVIZI>"
+  Owner       = "ppa-eng-ca"
+  Source      = "https://github.com/pagopa/eng-ca-infra"
+  CostCenter  = "tier0"
 }
