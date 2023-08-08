@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'src/main/**'
+      - 'src/infra/main/**'
       - '.github/workflows/*.yml'
   workflow_dispatch:
     inputs:
@@ -25,14 +25,13 @@ on:
         default: dev
         options:
         - dev
-        - uat
 
 
 jobs:
   manual-trigger:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: "terraform-apply (manual)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     permissions:
       id-token: write   # This is required for requesting the JWT
@@ -41,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
 
       - name: Configure AWS Credentials
         env:
@@ -63,7 +62,7 @@ jobs:
       strategy:
         max-parallel: 1
         matrix:
-          environment: [dev, uat, prod_w]
+          environment: [dev]
       runs-on: ubuntu-latest
       continue-on-error: false
       environment: ${{ matrix.environment }}
@@ -73,15 +72,13 @@ jobs:
 
       steps:
         - name: Checkout
-          uses: actions/checkout@v3
+          uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
 
         - name: Configure AWS Credentials
-          env:
-            AWS_REGION: eu-south-1
           uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838
           with:
-            role-to-assume: ${{ secrets.IAM_ROLE }}
-            aws-region: ${{ env.AWS_REGION }}
+            role-to-assume: ${{ vars.IAM_ROLE }}
+            aws-region: ${{ vars.AWS_REGION }}
         
         - name: Apply
           uses: ./.github/workflows/apply
