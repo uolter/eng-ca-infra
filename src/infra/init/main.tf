@@ -1,13 +1,12 @@
 terraform {
   required_version = "~> 1.5.0"
 
-  # TODO Uncomment once the backend S3 bucket is created and upload the state tate file.
-  #backend "s3" {}
+  backend "s3" {}
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> <terraform aws plugin version eg: 4.0.0>"
+      version = "=5.11.0"
     }
   }
 }
@@ -20,6 +19,7 @@ provider "aws" {
 # create an S3 bucket to store the state file in
 
 resource "aws_s3_bucket" "terraform_states" {
+  count         = var.create_backend ? 1 : 0
   bucket_prefix = "terraform-backend-"
 
   lifecycle {
@@ -32,20 +32,23 @@ resource "aws_s3_bucket" "terraform_states" {
 }
 
 resource "aws_s3_bucket_ownership_controls" "terraform_states" {
-  bucket = aws_s3_bucket.terraform_states.id
+  count  = var.create_backend ? 1 : 0
+  bucket = aws_s3_bucket.terraform_states[0].id
   rule {
     object_ownership = "ObjectWriter"
   }
 }
 
 resource "aws_s3_bucket_acl" "terraform_states" {
-  bucket     = aws_s3_bucket.terraform_states.id
+  count      = var.create_backend ? 1 : 0
+  bucket     = aws_s3_bucket.terraform_states[0].id
   acl        = "private"
   depends_on = [aws_s3_bucket_ownership_controls.terraform_states]
 }
 
 resource "aws_s3_bucket_public_access_block" "terraform_states" {
-  bucket                  = aws_s3_bucket.terraform_states.id
+  count                   = var.create_backend ? 1 : 0
+  bucket                  = aws_s3_bucket.terraform_states[0].id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -53,7 +56,8 @@ resource "aws_s3_bucket_public_access_block" "terraform_states" {
 }
 
 resource "aws_s3_bucket_versioning" "terraform_states" {
-  bucket = aws_s3_bucket.terraform_states.id
+  count  = var.create_backend ? 1 : 0
+  bucket = aws_s3_bucket.terraform_states[0].id
   versioning_configuration {
     status = "Enabled"
   }
@@ -61,6 +65,7 @@ resource "aws_s3_bucket_versioning" "terraform_states" {
 
 # create a DynamoDB table for locking the state file
 resource "aws_dynamodb_table" "dynamodb-terraform-state-lock" {
+  count          = var.create_backend ? 1 : 0
   name           = "terraform-lock"
   hash_key       = "LockID"
   read_capacity  = 4

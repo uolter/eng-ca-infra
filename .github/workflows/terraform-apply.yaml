@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'src/main/**'
+      - 'src/infra/main/**'
       - '.github/workflows/*.yml'
   workflow_dispatch:
     inputs:
@@ -25,14 +25,13 @@ on:
         default: dev
         options:
         - dev
-        - uat
 
 
 jobs:
   manual-trigger:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: "terraform-apply (manual)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     permissions:
       id-token: write   # This is required for requesting the JWT
