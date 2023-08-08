@@ -5,15 +5,15 @@ on:
     branches:
       - '**'        # matches every branch
       - '!main'     # excludes main
-      - '!master'     # excludes master
+      - '!master'   # excludes master
     paths:
-      - 'src/main/**'
+      - 'src/infra/main/**'
       - '.github/workflows/*.yml'
 
 defaults:
   run:
     shell: bash
-    working-directory: src/main
+    working-directory: src/infra/main
 
 permissions:
   id-token: write   # This is required for requesting the JWT
@@ -23,22 +23,20 @@ jobs:
   terraform:
     strategy:
       matrix:
-        environment: [dev, uat, prod]
+        environment: [dev]
     name: "terraform-plan"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: ${{ matrix.environment }}
      
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
 
       - name: Configure AWS Credentials
-        env:
-          AWS_REGION: eu-south-1
         uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838
         with:
-          role-to-assume: ${{ secrets.IAM_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
       
       - name: Read terraform version 
         id: read-version

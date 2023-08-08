@@ -13,8 +13,14 @@ variable "environment" {
 variable "github_repository" {
   type        = string
   description = "This github repository"
+  default     = "https://github.com/pagopa/eng-ca.git"
 }
 
+variable "create_backend" {
+  type        = bool
+  description = "Crate S3 bucket and Dynamodb table to store the state file."
+  default     = true
+}
 
 variable "tags" {
   type = map(any)

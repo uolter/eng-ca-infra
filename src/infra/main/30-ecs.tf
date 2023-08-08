@@ -43,7 +43,6 @@ resource "aws_ecs_cluster_capacity_providers" "ecs_cluster_capacity" {
   }
 }
 
-
 resource "aws_iam_role" "ecs_vault_task_role" {
   name = "PPAVaultTaskRole"
 
@@ -60,7 +59,6 @@ resource "aws_iam_role" "ecs_vault_task_role" {
     ]
   })
 }
-
 
 resource "aws_iam_policy" "vault_task_policy" {
   name        = "PPAEcsTaskVaultKMS"
@@ -237,4 +235,3 @@ resource "aws_ecs_service" "vault-svc" {
 
   }
 }
-
